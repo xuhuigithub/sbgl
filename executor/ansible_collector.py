@@ -37,7 +37,7 @@ class Collector:
         print("staw")
         loader = DataLoader()
         # results_callback = ResultPopulater()
-        results_callback = CallbackModule()
+        # results_callback = CallbackModule()
         # results_callback.asset = self.asset
         play_source =  dict(
             name = "Ansible Play",
@@ -70,7 +70,7 @@ class Collector:
                     variable_manager=v,
                     loader=loader,
                     passwords=dict(vault_pass='secret',conn_pass=''), # 默认使用ssh秘钥链接
-                    stdout_callback=results_callback,  # Use our custom callback instead of the ``default`` callback plugin
+                    # stdout_callback=results_callback,  # Use our custom callback instead of the ``default`` callback plugin
                 )
             result = tqm.run(play)
             if result != tqm.RUN_OK:

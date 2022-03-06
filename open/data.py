@@ -1,4 +1,6 @@
 import imp
+
+import werkzeug
 from . import open as _open
 from api import wrapresp
 import models
@@ -80,21 +82,28 @@ def make_streaming(stream_filename, core_function, exit_function):
     fd1.seek(0)
     fd2: typing.IO = open(stream_filename, "w")
     def stream():
-        yield "<html>"
-        yield """
-        <style>
-    span {
-        display: block;
-    }
-</style>
-        """
+#         yield "<html>"
+#         yield """
+#         <style>
+#     span {
+#         display: block;
+#     }
+# </style>
+#         """
+        s_id = 1
         while e.is_set() != True:
-            msg = fd1.read()
-            yield conv.convert(msg, full=False)
-        yield "</html>"
+            msg = fd1.readline()
+            if msg != "":
+                l = "data: " +  conv.convert(msg.strip(), full=False) + "\n\n" 
+                s_id += 1
+                yield "event: ping\n"
+                yield l 
+        # yield "</html>"
         fd1.close()
         fd2.close()
         exit_function()
+        yield "event: ping\n"
+        yield "data: EOF\n\n"
     
     def wrap_core_function():
         sys.stdout = fd2
@@ -122,3 +131,9 @@ def test_open_data():
 
     return flask.Response(stream(), mimetype='text/event-stream')
 
+
+@_open.route('/api/getPlayRoles', methods=['GET'])
+@wrapresp
+def test_getPlayRoles():
+    
+    return ["zookeeper"]
