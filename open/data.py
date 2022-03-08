@@ -21,14 +21,20 @@ def sizeof_fmt(num, suffix='B'):
         num /= 1024.0
     return ("%.1f" % (num,), 'Yi' + suffix)
 
+def try_int(num):
+    try:
+        return int(num)
+    except TypeError:
+        return 0
+
 @_open.route('/api/openData', methods=['GET'])
 @wrapresp
 def open_data():
     storage_sum = models.Assets.query.with_entities(func.sum(models.Assets.disk).label("storage_sum")).first().storage_sum
-    storage_sum, storage_sum_unit = sizeof_fmt(int(storage_sum))
-    os_users_sum = int(models.Assets.query.with_entities(func.sum(models.Assets.user_nums).label("os_users_sum")).first().os_users_sum)
-    mem_sum = int(models.Assets.query.with_entities(func.sum(models.Assets.mem).label("mem_sum")).first().mem_sum)
-    mem_sum, mem_sum_unit = sizeof_fmt(int(mem_sum))
+    storage_sum, storage_sum_unit = sizeof_fmt(try_int(storage_sum))
+    os_users_sum = try_int(models.Assets.query.with_entities(func.sum(models.Assets.user_nums).label("os_users_sum")).first().os_users_sum)
+    mem_sum = try_int(models.Assets.query.with_entities(func.sum(models.Assets.mem).label("mem_sum")).first().mem_sum)
+    mem_sum, mem_sum_unit = sizeof_fmt(try_int(mem_sum))
     dc_data = []
     
     for dc in models.DC.query.all():
@@ -46,8 +52,8 @@ def open_data():
     for disk_avg_bullet in models.Assets.query.with_entities(models.Assets.sn,models.Assets.disk).order_by(models.Assets.disk.asc()).limit(5).all():
         disk_avg_bullets.append(dict(
             title=disk_avg_bullet.sn,
-            measures=[int(disk_avg_bullet.disk)],
-            targets=[int(disk_taget_n)]
+            measures=[try_int(disk_avg_bullet.disk)],
+            targets=[try_int(disk_taget_n)]
         ))
 
     mem_avg_bullets = []
@@ -55,8 +61,8 @@ def open_data():
     for mem_avg_bullet in models.Assets.query.with_entities(models.Assets.sn,models.Assets.mem).order_by(models.Assets.mem.asc()).limit(5).all():
         mem_avg_bullets.append(dict(
             title=mem_avg_bullet.sn,
-            measures=[int(mem_avg_bullet.mem)],
-            targets=[int(mem_taget_n)]
+            measures=[try_int(mem_avg_bullet.mem)],
+            targets=[try_int(mem_taget_n)]
         ))
 
     return dict(
