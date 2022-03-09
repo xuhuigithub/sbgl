@@ -117,3 +117,9 @@ class AssetFamily_Enum(Enum):
     NETWORK = "网络设备"
     DESKTOP = "桌面设备"
     SEC = "安全设备"
+
+class PlayRole(Base):
+    __tablename__ = 'play_role'
+    name = Column(String(50), primary_key=True, comment="角色名")
+    path = Column(String(50), comment="角色路径")
+    play_args = Column(Text(), comment="模型")

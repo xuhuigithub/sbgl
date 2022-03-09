@@ -64,3 +64,4 @@ from .permission import ns as permission_ns
 from .asset import ns as asset_ns
 from .cabinet import ns as cabinet_ns
 from .dc import ns as dc_ns
+from .play_role import ns as play_role_ns
