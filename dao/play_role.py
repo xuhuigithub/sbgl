@@ -8,7 +8,7 @@ class PlayRoleDAO(BaseDao):
     mapping = {
         "String": str,
         "Int": int,
-        "Boolen": bool
+        "Boolean": bool
     }
     def __init__(self):
         pass
@@ -27,6 +27,12 @@ class PlayRoleDAO(BaseDao):
                 data['path']
                 for i in data['play_args']:
                     i["name"]
+                    if i["type"] == "Int": 
+                        assert isinstance(int(i["value"]), self.mapping[i["type"]])
+                        continue
+                    if i["type"] == "Boolean": 
+                        assert i["value"] in ["true", "false"]
+                        continue
                     assert isinstance(i["value"], self.mapping[i["type"]])
             except Exception:
                 raise RequestFilterException

@@ -63,14 +63,11 @@ class Collector:
 
     
     def collect(self):
-        import sys 
-        fs = open("testfile", "w")
-        sys.stdout = fs
-        print("staw")
+
         loader = DataLoader()
         # results_callback = ResultPopulater()
-        results_callback = CallbackModule()
-        # results_callback.asset = self.asset
+        results_callback = ResultPopulater()
+        results_callback.asset = self.asset
         play_source =  dict(
             name = "Ansible Play",
             hosts = self.asset.ip,
