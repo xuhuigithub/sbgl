@@ -45,6 +45,20 @@ class BaseDao:
         start = int(start)
         limit = int(limit)
         count = len(results)
+        if limit == -1:
+            obj = {}
+            obj['results'] = results[(start - 1):]
+            obj['count'] = count
+            obj['next'] = ''
+            obj['start'] = start
+            obj['limit'] = limit
+            start_copy = max(1, start - 1)
+            limit_copy = - 1
+            obj['previous'] = url + '?start=%d&limit=%d' % (start_copy, limit_copy)
+            if start == 1:
+                obj['previous'] = ''
+            return obj
+
         if count < start or limit < 0:
             return []
         # make response
