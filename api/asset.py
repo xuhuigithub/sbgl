@@ -3,7 +3,7 @@ import datetime
 from sqlalchemy.util.langhelpers import attrsetter
 from . import api, Resource as _Resource
 from flask_restplus import Api, fields
-from dao.asset import AssetDAO
+from dao.asset import AssetDAO, IllegalStateException
 from dao import DataNotFoundException, DataBaseCommitException,RequestFilterException
 from utils import raise_error_api
 from flask import request
@@ -33,7 +33,8 @@ asset = api.model('Asset', {
     "family": fields.String(),
     "cabinet": fields.String(attribute="cabinet.name"),
     "dc": fields.String(attribute="cabinet.dc_name"),
-    "user_nums": fields.Integer()
+    "user_nums": fields.Integer(),
+    "last_seen": fields.String()
 })
 page_asset = api.model('PageAsset',{
     "start": fields.Integer(required=True),
@@ -51,6 +52,7 @@ class Resource(_Resource):
     @raise_error_api(captures=(DataNotFoundException,), err_msg="资产没有找到")
     @raise_error_api(captures=(DataBaseCommitException,RequestFilterException), err_msg="数据查询异常")
     @raise_error_api(captures=(ansible_collector.CollectorException,), err_msg="数据采集异常,请检查服务器的联通性")
+    @raise_error_api(captures=(IllegalStateException,), err_msg="参数异常")
     def dispatch_request(self, *args, **kwargs):
         return super().dispatch_request(*args, **kwargs)
 

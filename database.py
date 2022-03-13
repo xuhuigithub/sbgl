@@ -4,8 +4,10 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import operators
 from sqlalchemy.sql.functions import user
 
-engine = create_engine('sqlite:///./test_installOS.db', convert_unicode=True)
-# engine = create_engine('mysql+mysqlconnector://root:12345678@192.168.99.183/assets?charset=utf8', encoding='utf-8',echo=False, pool_size=30, max_overflow=15, pool_recycle=60 * 60)
+
+# engine = create_engine('sqlite:///./test_installOS.db', convert_unicode=True)
+engine = create_engine('mysql+mysqlconnector://root:1Qaz#123@192.168.99.79/test?charset=utf8', encoding='utf-8',echo=False, pool_size=30, max_overflow=15, )
+# pool_recycle=60 * 60
 db_session = scoped_session(sessionmaker(autocommit=False,
                                          autoflush=False,
                                          bind=engine))

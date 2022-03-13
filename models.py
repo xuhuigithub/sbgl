@@ -1,5 +1,5 @@
 from uuid import uuid1
-from sqlalchemy import Column, Integer, String, Text, DateTime,Index,BigInteger
+from sqlalchemy import Column, Integer, String, Text, DateTime,Index,BigInteger, null
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.schema import ForeignKey, Table
 from database import Base
@@ -26,6 +26,7 @@ class Assets(Base):
     postion = Column(String(50), comment="机柜位置")
     family = Column(String(50), comment="设备类型", nullable=False)
     user_nums = Column(Integer, comment="系统用户数量")
+    last_seen = Column(DateTime(), comment="最后确认存活时间")
 
     def __repr__(self):
         return '<Asset %r>' % (self.sn)
@@ -123,13 +124,16 @@ class PlayRole(Base):
     name = Column(String(50), primary_key=True, comment="角色名")
     path = Column(String(50), comment="角色路径")
     play_args = Column(Text(), comment="模型")
+    sub_roles = relationship("SubPlayRole", back_populates="main")
 
 class SubPlayRole(Base):
     __tablename__ = 'sub_play_role'
     name = Column(String(50), primary_key=True, comment="角色名")
     main_name = Column(String(50),ForeignKey("play_role.name") ,comment="主角色名称")
-    main = relationship("PlayRole")
+    main = relationship("PlayRole", viewonly=True, back_populates="sub_roles")
     play_args = Column(Text(), comment="模型")
     hosts =  Column(Text(), comment="主机")
     last_update = Column(DateTime(), comment="最后更新时间")
     last_execution = Column(DateTime(), comment="最后执行时间")
+    last_exit_code = Column(String(50), comment="最后一次退出状态", default=None)
+    last_log = Column(Text(), comment="最后一次执行日志", default=None)

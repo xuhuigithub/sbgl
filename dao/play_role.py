@@ -6,6 +6,7 @@ from sqlalchemy import delete
 from models import PlayRole, SubPlayRole
 from database import db_session
 from . import DataNotFoundException, BaseDao, RequestFilterException
+from sqlalchemy import or_
 
 
 class PlayRoleDAO(BaseDao):
@@ -81,17 +82,22 @@ class PlayRoleDAO(BaseDao):
         self._try_commint()
 
 class SubPlayRoleDAO(BaseDao):
-    def __init__(self):
-        pass
+    def __init__(self, o_db_session=None):
+        if o_db_session:
+            self.db_session = o_db_session
+        else:
+            self.db_session = db_session
 
     def get(self, name):
         return self._get(name)
 
     def list(self):
-        return list(map(self.deserialize, SubPlayRole.query.all()))
+        query = SubPlayRole.query
+        query = self.handle_filter(query=query)
+        return list(map(self.deserialize, query.all()))
     
     def deserialize(self, model: SubPlayRole):
-        model.main.play_args = json.loads(model.main.play_args)
+        # model.main.play_args = json.loads(model.main.play_args)
         model.play_args = json.loads(model.play_args)
         model.hosts =  json.loads(model.hosts)
         return model
@@ -99,7 +105,7 @@ class SubPlayRoleDAO(BaseDao):
     def serialize(self, model: SubPlayRole):
          model.play_args = json.dumps(model.play_args)
          model.hosts =  json.dumps(model.hosts)
-         model.main.play_args = json.dumps(model.main.play_args)
+        #  model.main.play_args = json.dumps(model.main.play_args)
          return model
 
     def _get(self, name):
@@ -115,7 +121,7 @@ class SubPlayRoleDAO(BaseDao):
             setattr(u, k, data[k])
         setattr(u, "last_update", datetime.datetime.now())
         u = self.serialize(u)
-        db_session.add(u)
+        self.db_session.add(u)
         self._try_commint()
         return self.deserialize(u)
     
@@ -127,12 +133,21 @@ class SubPlayRoleDAO(BaseDao):
             setattr(u, k, data[k])
         setattr(u, "last_update", datetime.datetime.now())
         u = self.serialize(u)
-        db_session.add(u)
+        self.db_session.add(u)
         self._try_commint()
         return self.deserialize(u)
 
     def delete(self, name):
         u = self._get(name)
         u = self.serialize(u)
-        db_session.delete(u)
+        self.db_session.delete(u)
         self._try_commint()
+
+    def handle_main_name(self, query, value):
+        return query.filter(SubPlayRole.main_name == value)
+
+    def handle_ip(self, query,value):
+        return query.filter(or_(SubPlayRole.hosts.like(f"%{value},"),SubPlayRole.hosts.like(f"%{value}")))
+
+    def handle_name(self, query,value):
+        return query.filter(or_(SubPlayRole.main_name.like(f"%{value}%"),SubPlayRole.name.like(f"%{value}%")))

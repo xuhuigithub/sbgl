@@ -1,21 +1,17 @@
+from typing import List
 from attr import validate
-from . import api, Resource as _Resource
+from . import api, Resource as _Resource, OringalResource
 from flask_restplus import fields
 from dao.play_role import PlayRoleDAO, SubPlayRoleDAO
 from dao import DataNotFoundException, DataBaseCommitException, RequestFilterException
 from utils import raise_error_api
 from flask import request
+from flask import Response
 
 _model = api.model('Prop', {
     "name": fields.String(),
     "type": fields.String(),
     "value": fields.String()
-})
-
-role = api.model('PlayRole', {
-    "name": fields.String(required=True),
-    "path": fields.String(required=True),
-    "play_args": fields.List(fields.Nested(_model), required=True)
 })
 
 sub_role = api.model('SubPlayRole', {
@@ -25,6 +21,14 @@ sub_role = api.model('SubPlayRole', {
     "hosts": fields.List(fields.String()),
     "last_update":fields.DateTime(),
     "last_execution":fields.DateTime(),
+    "last_exit_code":fields.String(),
+})
+
+role = api.model('PlayRole', {
+    "name": fields.String(required=True),
+    "path": fields.String(required=True),
+    "play_args": fields.List(fields.Nested(_model), required=True),
+    # "sub_roles": fields.List(fields.Nested(sub_role))
 })
 
 page_sub_role = api.model('PageSubRole',{
@@ -121,3 +125,18 @@ class SubRole(Resource):
     def delete(self, name):
         Sub_DAO.delete(name)
         return {}
+
+@ns.route("name")
+@ns.param("name", "角色名")
+@ns.route('/sub/<name>/log')
+class SubRoleLog(OringalResource):
+
+    @ns.doc('get_sub_play_role_log')
+    @raise_error_api(captures=(DataNotFoundException), err_msg="数据没有找到")
+    def get(self, name):
+        a= Sub_DAO.get(name)
+
+        return Response(a.last_log, headers={
+            "Content-Type": "application/octet-stream",
+            "Content-Disposition": "attachment;filename=\"%s-%s-log.txt\"" %(a.name, a.last_execution,)
+        })

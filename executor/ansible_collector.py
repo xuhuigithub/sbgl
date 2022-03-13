@@ -1,6 +1,7 @@
 from copy import Error
 import sys
 import time
+import typing
 sys.path.append("./")
 
 from ansible.parsing.dataloader import DataLoader
@@ -11,7 +12,7 @@ from ansible.plugins.callback.default import CallbackModule
 from ansible.inventory.manager import InventoryManager
 from ansible.vars.manager import VariableManager
 import tempfile
-from models import Assets
+from models import Assets, SubPlayRole
 import os
 from flask import app
 
@@ -25,29 +26,39 @@ class CollectorException(Error):
 
 
 class Collector:
+    
 
-    def __init__(self, asset: Assets, logfile) -> None:
-        self.asset = asset
+    def __init__(self, logfile: str, hosts: typing.List[str],role_path: str, vars: typing.List[typing.Dict[str, str]], group_name: str) -> None:
         self.logfile = logfile
+        self.role_path = role_path
+        self.vars = vars
+        self.group_name = group_name
+        self.hosts = hosts
     
     def collect(self):
-        import sys 
+        result = 1
         # fs = open(self.logfile, "w")
         # sys.stdout = fs
         print("staw")
         loader = DataLoader()
-        # results_callback = ResultPopulater()
-        # results_callback = CallbackModule()
-        # results_callback.asset = self.asset
+        loader.set_basedir(self.role_path)
+        _vars = {}
+        for z in self.vars:
+            _vars.setdefault(z["name"],z["value"])
         play_source =  dict(
             name = "Ansible Play",
-            hosts = self.asset.ip,
+            hosts = self.group_name,
             gather_facts = 'yes',
             connection="smart",
             # gather_timeout=10,
             # ssh 连接超时时间
-            timeout = 60,
+            timeout = 300,
             user="root",
+            # roles_path = self.asset.main.path,
+            roles = [
+            {"role": self.group_name} 
+            ],
+            vars = _vars,
             tasks = [
                 dict(name="user_nums", action=dict(module='shell', args='cat /etc/passwd |wc -l'), register='shell_out'),
             ]
@@ -57,14 +68,16 @@ class Collector:
         with open(a, 'w') as f:
             f.write("")
         i = InventoryManager(loader=loader, sources=a)
-        i.add_group("all")
-        i.add_host(self.asset.ip, group="all")
+        i.add_group(self.group_name)
+        for g in self.hosts:
+            i.add_host(g, group=self.group_name)
         os.remove(a)
         v = VariableManager(loader=loader, inventory=i, version_info="4.5.0")
-        play = Play().load(play_source,variable_manager=v, loader=loader)
 
         tqm = None
         try:
+            play = Play().load(play_source,variable_manager=v, loader=loader)
+
             tqm = TaskQueueManager(
                     inventory=i,
                     variable_manager=v,
@@ -73,11 +86,12 @@ class Collector:
                     # stdout_callback=results_callback,  # Use our custom callback instead of the ``default`` callback plugin
                 )
             result = tqm.run(play)
-            if result != tqm.RUN_OK:
-                raise CollectorException(status=result)
         finally:
             if tqm is not None:
                 tqm.cleanup()
+
+        return result
+
 
 if __name__ == "__main__":
 

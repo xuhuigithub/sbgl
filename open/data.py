@@ -1,9 +1,14 @@
-import imp
 
-import werkzeug
+import multiprocessing
+import time
+import traceback
+from flask import request
+from dao.play_role import SubPlayRoleDAO
+from dao import DataNotFoundException
 from . import open as _open
 from api import wrapresp
 import models
+import datetime
 from sqlalchemy.sql import func
 import flask
 import typing
@@ -12,6 +17,7 @@ from multiprocessing import Event, Process
 from executor.ansible_collector import Collector
 import tempfile
 import os
+from utils import raise_error_api
 
 
 def sizeof_fmt(num, suffix='B'):
@@ -83,6 +89,7 @@ conv = Ansi2HTMLConverter(inline=True, scheme="xterm")
 
 
 def make_streaming(stream_filename, core_function, exit_function):
+    result_q = multiprocessing.Queue()
     e = Event()
     fd1: typing.IO = open(stream_filename, "r")
     fd1.seek(0)
@@ -100,6 +107,9 @@ def make_streaming(stream_filename, core_function, exit_function):
         while e.is_set() != True:
             msg = fd1.readline()
             if msg != "":
+                if msg.strip() == "End of file":
+                    e.set()
+                    continue
                 l = "data: " +  conv.convert(msg.strip(), full=False) + "\n\n" 
                 s_id += 1
                 yield "event: ping\n"
@@ -107,31 +117,51 @@ def make_streaming(stream_filename, core_function, exit_function):
         # yield "</html>"
         fd1.close()
         fd2.close()
-        exit_function()
+        exit_function(result_q)
         yield "event: ping\n"
         yield "data: EOF\n\n"
     
     def wrap_core_function():
+        # 这将在新进程里运行
         sys.stdout = fd2
         sys.stderr = fd2
-        core_function()
-        e.set()
+        try:
+            result = core_function()
+            result_q.put(result)
+        except Exception as ex:
+            traceback.print_exc()
+            # 为了进程退出代码为1
+            raise ex
+        finally:
+            print("End of file",file=fd2)
         
-    return stream, wrap_core_function
+    return stream, wrap_core_function, result_q
 
-@_open.route('/api/test', methods=['GET'])
+@_open.route('/api/execPlayRole', methods=['GET'])
+@raise_error_api(captures=(KeyError), err_msg="传参错误请检查")
+@raise_error_api(captures=(DataNotFoundException,), err_msg="权限或者角色没有找到")
 def test_open_data():
     
-    a = models.Assets()
-    a.ip = "192.168.99.73"
+    sub_play_name = request.args['name']
+    dao = SubPlayRoleDAO()
+    sub_play = dao.get(name=sub_play_name)
     f = tempfile.mkstemp()
-    c = Collector(asset=a, logfile=f[1])
+    c = Collector(logfile=f[1], vars=sub_play.play_args, hosts=sub_play.hosts, group_name=sub_play.main_name, role_path=sub_play.main.path)
     print(f[1])
     p = Process()
-    def exit_function():
+    def exit_function(result_q):
         p.join()
+        result = result_q.get()
+        with open(f[1], 'r') as fs:
+            last_log = fs.read()
+        dao.update(sub_play_name, data={
+            "last_execution": datetime.datetime.now(),
+            "last_exit_code": result,
+            "last_log": last_log
+        })
         os.remove(f[1])
-    stream, collect = make_streaming(f[1], c.collect, exit_function)
+    stream, collect,result_q = make_streaming(f[1], c.collect, exit_function)
+
     p._target = collect
     p.start()
 

@@ -39,5 +39,5 @@ class User(Resource):
 
     @ns.doc('get_permission')
     @ns.marshal_with(permission)
-    def get(self, name):
-        return DAO.get(name)
+    def get(self, id):
+        return DAO.get(id)
