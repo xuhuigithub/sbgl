@@ -1,9 +1,10 @@
 
 import multiprocessing
 import time
+import json
 import traceback
 from flask import request
-from dao.play_role import SubPlayRoleDAO
+from dao.play_role import SubPlayRoleDAO, serializeSub
 from dao import DataNotFoundException
 from . import open as _open
 from api import wrapresp
@@ -150,15 +151,40 @@ def test_open_data():
     print(f[1])
     p = Process()
     def exit_function(result_q):
+        now = datetime.datetime.now()
         p.join()
         result = result_q.get()
         with open(f[1], 'r') as fs:
             last_log = fs.read()
-        dao.update(sub_play_name, data={
-            "last_execution": datetime.datetime.now(),
-            "last_exit_code": result,
-            "last_log": last_log
-        })
+        # dao.update(sub_play_name, data={
+        #     "last_execution": now,
+        #     "last_exit_code": result,
+        #     "last_log": last_log
+        # })
+        sub_play = dao.get(name=sub_play_name)
+        sub_play.last_execution = now
+        sub_play.last_exit_code = result
+        sub_play.last_log = last_log
+        sub_play = serializeSub(sub_play)
+        from models import RoleExection
+        r = RoleExection()
+        r.name = sub_play.name
+        r.main_name = sub_play.main_name
+        r.exit_code = result
+        r.exec_log = last_log
+        r.exec_time = now
+        r.play_vars = json.dumps(sub_play.play_args)
+        r.hosts = json.dumps(sub_play.hosts)
+
+        from database import db_session
+        try:
+            db_session.add(r)
+            db_session.add(sub_play)
+            db_session.commit()
+        except Exception:
+            traceback.print_exc()
+            db_session.rollback()
+
         os.remove(f[1])
     stream, collect,result_q = make_streaming(f[1], c.collect, exit_function)
 

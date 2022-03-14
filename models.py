@@ -137,3 +137,14 @@ class SubPlayRole(Base):
     last_execution = Column(DateTime(), comment="最后执行时间")
     last_exit_code = Column(String(50), comment="最后一次退出状态", default=None)
     last_log = Column(Text(), comment="最后一次执行日志", default=None)
+
+class RoleExection(Base):
+    __tablename__ = 'role_execs'
+    id = Column(Integer(), autoincrement=True, primary_key=True)
+    name = Column(String(50))
+    main_name = Column(String(50))
+    exit_code = Column(String(50), comment="退出状态", default=None)
+    exec_time = Column(DateTime(), comment="执行时间")
+    play_vars = Column(Text(), comment="模型")
+    hosts = Column(Text(), comment="主机")
+    exec_log = Column(Text(), comment="执行日志", default=None)
