@@ -124,7 +124,7 @@ class PlayRole(Base):
     name = Column(String(50), primary_key=True, comment="角色名")
     path = Column(String(50), comment="角色路径")
     play_args = Column(Text(), comment="模型")
-    sub_roles = relationship("SubPlayRole", back_populates="main")
+    sub_roles = relationship("SubPlayRole", back_populates="main", cascade="all, delete-orphan")
 
 class SubPlayRole(Base):
     __tablename__ = 'sub_play_role'

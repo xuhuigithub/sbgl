@@ -87,6 +87,14 @@ class PlayRoleDAO(BaseDao):
         u.play_args = json.loads(u.play_args)
         return u
 
+    def names(self, play_args=None):
+        return [ i['name']  for i in play_args ]
+
+    def get_arg(self, name=None ,play_args=None):
+        for i in play_args:
+            if i['name'] == name:
+                return i
+
     def update(self, name, data):
         u = self._get(name)
         self.validate_data(data)
@@ -96,15 +104,15 @@ class PlayRoleDAO(BaseDao):
         for i in u.sub_roles:
             i: SubPlayRole
             j = json.loads(i.play_args)
-            for index,c in enumerate(j):
+            for index,c in enumerate(self.names(j)):
                 # 删除多余变量
-                if c not in data['play_args']:
+                if c not in self.names(data['play_args']):
                     del j[index]
                 
             # 新增加变量赋值默认值
-            for d in data['play_args']:
-                if d not in j:
-                    j.append(d)
+            for d in self.names(data['play_args']):
+                if d not in self.names(j):
+                    j.append(self.get_arg(d, data['play_args']))
             
             i.play_args =  json.dumps(j)
             i.main.play_args = json.dumps(i.main.play_args)
