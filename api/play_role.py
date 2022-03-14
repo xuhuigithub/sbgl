@@ -31,6 +31,15 @@ role = api.model('PlayRole', {
     # "sub_roles": fields.List(fields.Nested(sub_role))
 })
 
+page_role = api.model('PageRole',{
+    "start": fields.Integer(required=True),
+    "limit": fields.Integer(required=True),
+    "count": fields.Integer(required=True),
+    "previous": fields.String(required=True),
+    "next": fields.String(required=True),
+    "results":fields.List(fields.Nested(role))
+})
+
 page_sub_role = api.model('PageSubRole',{
     "start": fields.Integer(required=True),
     "limit": fields.Integer(required=True),
@@ -57,9 +66,13 @@ Sub_DAO = SubPlayRoleDAO()
 @ns.route('/')
 class PlayRoleList(Resource):
     @ns.doc("list_play_role")
-    @ns.marshal_list_with(role)
+    @ns.marshal_list_with(page_role)
+    @ns.param("start", description="分页开始")
+    @ns.param("limit", description="页面数据大小")
     def get(self):
-        return DAO.list() 
+        start = request.args.get("start", 1)
+        limit = request.args.get("limit", 20)
+        return DAO.get_paginated_list(url=api.url_for(self), results=DAO.list(), start=start, limit=limit) 
 
     @ns.doc('create_play_role')
     @ns.expect(role)
@@ -78,15 +91,15 @@ class Role(Resource):
     def get(self, name):
         return DAO.get(name)
 
-    # @ns.doc("delete_role")
-    # def delete(self, name):
-    #     DAO.delete(name)
-    #     return {}
+    @ns.doc("delete_play_role")
+    def delete(self, name):
+        DAO.delete(name)
+        return {}
 
-    # @ns.expect(role)
-    # @ns.marshal_with(role)
-    # def put(self, name):
-    #     return DAO.update(name, api.payload)
+    @ns.expect(role)
+    @ns.marshal_with(role)
+    def put(self, name):
+        return DAO.update(name, api.payload)
 
 @ns.route('/sub')
 class SubPlayRoleList(Resource):

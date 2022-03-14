@@ -54,24 +54,24 @@ scheduler = APScheduler()
 scheduler.init_app(app)
 scheduler.start()
 
-@scheduler.task('interval', id='do_job_1', seconds=30, misfire_grace_time=900)
-def job1():
-    with scheduler.app.app_context():
-        from models import Assets
-        assets: typing.List[Assets] = Assets.query.all()
-        for i in assets:
-            try:
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.connect((i.ip, 22))
-                ssh_ok = True
-            except socket.error:
-                ssh_ok = False
+# @scheduler.task('interval', id='do_job_1', seconds=30, misfire_grace_time=900)
+# def job1():
+#     with scheduler.app.app_context():
+#         from models import Assets
+#         assets: typing.List[Assets] = Assets.query.all()
+#         for i in assets:
+#             try:
+#                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+#                     s.settimeout(3)
+#                     s.connect((i.ip, 22))
+#                 ssh_ok = True
+#             except socket.error:
+#                 ssh_ok = False
             
-            print(i.ip, ssh_ok)
-            if ssh_ok:
-                i.last_seen = datetime.datetime.now()
-                db_session.add(i)
-                db_session.commit()
+#             if ssh_ok:
+#                 i.last_seen = datetime.datetime.now()
+#                 db_session.add(i)
+#                 db_session.commit()
         
 from database import Base, engine
 Base.metadata.create_all(bind=engine)
