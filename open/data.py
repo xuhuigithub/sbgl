@@ -1,10 +1,9 @@
 
 import multiprocessing
 import time
-import json
 import traceback
 from flask import request
-from dao.play_role import SubPlayRoleDAO, serializeSub
+from dao.play_role import SubPlayRoleDAO
 from dao import DataNotFoundException
 from . import open as _open
 from api import wrapresp
@@ -165,7 +164,6 @@ def test_open_data():
         sub_play.last_execution = now
         sub_play.last_exit_code = result
         sub_play.last_log = last_log
-        sub_play = serializeSub(sub_play)
         from models import RoleExection
         r = RoleExection()
         r.name = sub_play.name
@@ -173,8 +171,8 @@ def test_open_data():
         r.exit_code = result
         r.exec_log = last_log
         r.exec_time = now
-        r.play_vars = json.dumps(sub_play.play_args)
-        r.hosts = json.dumps(sub_play.hosts)
+        r.play_vars = sub_play.play_args
+        r.hosts = sub_play.hosts
 
         from database import db_session
         try:

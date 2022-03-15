@@ -1,11 +1,13 @@
+import hashlib
+import json
+import typing
 from uuid import uuid1
 from sqlalchemy import Column, Integer, String, Text, DateTime,Index,BigInteger, null
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.schema import ForeignKey, Table
 from database import Base
-import hashlib
 from enum import Enum
-
+from sqlalchemy.ext.hybrid import hybrid_property
 
 class Assets(Base):
     __tablename__ = 'assets'
@@ -123,20 +125,53 @@ class PlayRole(Base):
     __tablename__ = 'play_role'
     name = Column(String(50), primary_key=True, comment="角色名")
     path = Column(String(50), comment="角色路径")
-    play_args = Column(Text(), comment="模型")
+    _play_args = Column('play_args', Text(), comment="模型")
     sub_roles = relationship("SubPlayRole", back_populates="main", cascade="all, delete-orphan")
+
+    @hybrid_property
+    def play_args(self):
+        return json.loads(self._play_args)
+    
+    @play_args.setter
+    def play_args(self, play_args: typing.List[typing.Dict[str, str]]):
+        self._play_args = json.dumps(play_args)
+
+    def as_dict(self):
+        return {
+            "name": self.name,
+            "path": self.path,
+            "paly_args": self.play_args
+        }
+
 
 class SubPlayRole(Base):
     __tablename__ = 'sub_play_role'
     name = Column(String(50), primary_key=True, comment="角色名")
     main_name = Column(String(50),ForeignKey("play_role.name") ,comment="主角色名称")
     main = relationship("PlayRole", viewonly=True, back_populates="sub_roles")
-    play_args = Column(Text(), comment="模型")
-    hosts =  Column(Text(), comment="主机")
+    _play_args = Column('play_args', Text(), comment="模型")
+    _hosts =  Column('hosts', Text(), comment="主机")
     last_update = Column(DateTime(), comment="最后更新时间")
     last_execution = Column(DateTime(), comment="最后执行时间")
     last_exit_code = Column(String(50), comment="最后一次退出状态", default=None)
     last_log = Column(Text(), comment="最后一次执行日志", default=None)
+
+    @hybrid_property
+    def play_args(self):
+        return json.loads(self._play_args)
+    
+    @play_args.setter
+    def play_args(self, play_args: typing.List[typing.Dict[str, str]]):
+        self._play_args = json.dumps(play_args)
+
+    @hybrid_property
+    def hosts(self):
+        return json.loads(self._hosts)
+    
+    @hosts.setter
+    def hosts(self, hosts: typing.List[str]):
+        self._hosts = json.dumps(hosts)
+
 
 class RoleExection(Base):
     __tablename__ = 'role_execs'

@@ -1,4 +1,3 @@
-import json
 import datetime
 from operator import mod
 from typing import List
@@ -10,21 +9,21 @@ from database import db_session
 from . import DataNotFoundException, BaseDao, RequestFilterException
 from sqlalchemy import or_
 
-def deserializeSub(model: SubPlayRole):
-    # model.main.play_args = json.loads(model.main.play_args)
-    if  isinstance(model.play_args, str):
-        model.play_args = json.loads(model.play_args)
-    if  isinstance(model.hosts, str):
-        model.hosts =  json.loads(model.hosts)
-    return model
+# def deserializeSub(model: SubPlayRole):
+#     # model.main.play_args = json.loads(model.main.play_args)
+#     if  isinstance(model.play_args, str):
+#         model.play_args = json.loads(model.play_args)
+#     if  isinstance(model.hosts, str):
+#         model.hosts =  json.loads(model.hosts)
+#     return model
 
-def serializeSub(model: SubPlayRole):
-        if  isinstance(model.play_args, List):
-            model.play_args = json.dumps(model.play_args)
-        if  isinstance(model.hosts, List):
-            model.hosts =  json.dumps(model.hosts)
-    #  model.main.play_args = json.dumps(model.main.play_args)
-        return model
+# def serializeSub(model: SubPlayRole):
+#         if  isinstance(model.play_args, List):
+#             model.play_args = json.dumps(model.play_args)
+#         if  isinstance(model.hosts, List):
+#             model.hosts =  json.dumps(model.hosts)
+#     #  model.main.play_args = json.dumps(model.main.play_args)
+#         return model
 
 class PlayRoleDAO(BaseDao):
     mapping = {
@@ -36,11 +35,8 @@ class PlayRoleDAO(BaseDao):
         pass
 
     def list(self):
-        def process(u):
-            u.play_args = json.loads(u.play_args)
-            return u
         _all = PlayRole.query.all()
-        return list(map(process, _all))
+        return _all
 
     
     def validate_data(self, data):
@@ -67,7 +63,6 @@ class PlayRoleDAO(BaseDao):
         u = PlayRole.query.filter(PlayRole.name == name).first()
         if u is None:
             raise DataNotFoundException
-        u.play_args = json.loads(u.play_args)
         return u
 
     def get(self, name):
@@ -78,13 +73,11 @@ class PlayRoleDAO(BaseDao):
         u = PlayRole()
         for k in data.keys():
             if k == "play_args":
-                setattr(u, k, json.dumps(data[k]))
                 continue
             setattr(u, k, data[k])
 
         db_session.add(u)
         self._try_commint()
-        u.play_args = json.loads(u.play_args)
         return u
 
     def names(self, play_args=None):
@@ -103,7 +96,7 @@ class PlayRoleDAO(BaseDao):
         
         for i in u.sub_roles:
             i: SubPlayRole
-            j = json.loads(i.play_args)
+            j = i.play_args
             for index,c in enumerate(self.names(j)):
                 # 删除多余变量
                 if c not in self.names(data['play_args']):
@@ -114,20 +107,19 @@ class PlayRoleDAO(BaseDao):
                 if d not in self.names(j):
                     j.append(self.get_arg(d, data['play_args']))
             
-            i.play_args =  json.dumps(j)
-            i.main.play_args = json.dumps(i.main.play_args)
-            db_session.add(serializeSub(i))
+            i.play_args =  j
+            i.main.play_args = i.main.play_args
+            db_session.add(i)
             self._try_commint()
 
         for k in data.keys():
             if k == "play_args":
-                setattr(u, k, json.dumps(data[k]))
+                # setattr(u, k, json.dumps(data[k]))
                 continue
             setattr(u, k, data[k])
 
         db_session.add(u)
         self._try_commint()
-        u.play_args = json.loads(u.play_args)
         return u
 
     def delete(self, name):
@@ -148,25 +140,25 @@ class SubPlayRoleDAO(BaseDao):
     def list(self):
         query = SubPlayRole.query
         query = self.handle_filter(query=query)
-        return list(map(self.deserialize, query.all()))
+        return query.all()
     
-    def deserialize(self, model: SubPlayRole):
-        # model.main.play_args = json.loads(model.main.play_args)
-        model.play_args = json.loads(model.play_args)
-        model.hosts =  json.loads(model.hosts)
-        return model
+    # def deserialize(self, model: SubPlayRole):
+    #     # model.main.play_args = json.loads(model.main.play_args)
+    #     model.play_args = json.loads(model.play_args)
+    #     model.hosts =  json.loads(model.hosts)
+    #     return model
 
-    def serialize(self, model: SubPlayRole):
-         model.play_args = json.dumps(model.play_args)
-         model.hosts =  json.dumps(model.hosts)
-        #  model.main.play_args = json.dumps(model.main.play_args)
-         return model
+    # def serialize(self, model: SubPlayRole):
+    #      model.play_args = json.dumps(model.play_args)
+    #      model.hosts =  json.dumps(model.hosts)
+    #     #  model.main.play_args = json.dumps(model.main.play_args)
+    #      return model
 
     def _get(self, name):
         u = SubPlayRole.query.filter(SubPlayRole.name == name).first()
         if u is None:
             raise DataNotFoundException
-        return self.deserialize(u)
+        return u
     
     def create(self, data: dict):
         # self.validate_data(data)
@@ -177,7 +169,7 @@ class SubPlayRoleDAO(BaseDao):
         u = self.serialize(u)
         self.db_session.add(u)
         self._try_commint()
-        return self.deserialize(u)
+        return u
     
     def update(self, name, data):
         u = self._get(name)
@@ -186,14 +178,12 @@ class SubPlayRoleDAO(BaseDao):
                 continue
             setattr(u, k, data[k])
         setattr(u, "last_update", datetime.datetime.now())
-        u = self.serialize(u)
         self.db_session.add(u)
         self._try_commint()
         return self.deserialize(u)
 
     def delete(self, name):
         u = self._get(name)
-        u = self.serialize(u)
         self.db_session.delete(u)
         self._try_commint()
 

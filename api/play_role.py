@@ -1,5 +1,6 @@
-from typing import List
-from attr import validate
+import sys
+sys.path.append("./")
+
 from . import api, Resource as _Resource, OringalResource
 from flask_restplus import fields
 from dao.play_role import PlayRoleDAO, SubPlayRoleDAO
