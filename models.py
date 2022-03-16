@@ -180,6 +180,22 @@ class RoleExection(Base):
     main_name = Column(String(50))
     exit_code = Column(String(50), comment="退出状态", default=None)
     exec_time = Column(DateTime(), comment="执行时间")
-    play_vars = Column(Text(), comment="模型")
-    hosts = Column(Text(), comment="主机")
+    _play_vars = Column('play_vars',Text(), comment="模型")
+    _hosts = Column('hosts',Text(), comment="主机")
     exec_log = Column(Text(), comment="执行日志", default=None)
+
+    @hybrid_property
+    def play_vars(self):
+        return json.loads(self._play_vars)
+    
+    @play_vars.setter
+    def play_vars(self, play_vars: typing.List[typing.Dict[str, str]]):
+        self._play_vars = json.dumps(play_vars)
+
+    @hybrid_property
+    def hosts(self):
+        return json.loads(self._hosts)
+    
+    @hosts.setter
+    def hosts(self, hosts: typing.List[str]):
+        self._hosts = json.dumps(hosts)

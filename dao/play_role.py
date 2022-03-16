@@ -72,8 +72,6 @@ class PlayRoleDAO(BaseDao):
         self.validate_data(data)
         u = PlayRole()
         for k in data.keys():
-            if k == "play_args":
-                continue
             setattr(u, k, data[k])
 
         db_session.add(u)
@@ -113,9 +111,6 @@ class PlayRoleDAO(BaseDao):
             self._try_commint()
 
         for k in data.keys():
-            if k == "play_args":
-                # setattr(u, k, json.dumps(data[k]))
-                continue
             setattr(u, k, data[k])
 
         db_session.add(u)
@@ -166,7 +161,7 @@ class SubPlayRoleDAO(BaseDao):
         for k in data.keys():
             setattr(u, k, data[k])
         setattr(u, "last_update", datetime.datetime.now())
-        u = self.serialize(u)
+        # u = self.serialize(u)
         self.db_session.add(u)
         self._try_commint()
         return u
@@ -180,7 +175,7 @@ class SubPlayRoleDAO(BaseDao):
         setattr(u, "last_update", datetime.datetime.now())
         self.db_session.add(u)
         self._try_commint()
-        return self.deserialize(u)
+        return u
 
     def delete(self, name):
         u = self._get(name)
