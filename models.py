@@ -21,6 +21,7 @@ class Assets(Base):
     mem = Column(BigInteger(), comment="内存大小，字节")
     cpu = Column(String(80), comment="备注")
     mac = Column(String(50), comment="网卡mac")
+    _network_devices = Column('network_devices',Text(), comment="网卡设备")
     system = Column(String(50), comment="系统版本")
     ip = Column(String(50), comment="IP地址")
     cabinet_id = Column(Integer(), ForeignKey("cabinet.id"), comment="机柜ID", nullable=False)
@@ -29,6 +30,35 @@ class Assets(Base):
     family = Column(String(50), comment="设备类型", nullable=False)
     user_nums = Column(Integer, comment="系统用户数量")
     last_seen = Column(DateTime(), comment="最后确认存活时间")
+
+    @hybrid_property
+    def network_devices(self) -> typing.Dict[str, typing.Dict[str, str]]:
+        return json.loads(self._network_devices)
+    
+    @network_devices.setter
+    def network_devices(self, network_devices: typing.Dict[str, typing.Dict[str, str]]):
+        self._network_devices = json.dumps(network_devices)
+    
+    def set_network_devices(self, ansible_facts):
+        network_devices: typing.Dict[str, typing.Dict[str, str]] = {}
+        for i in ansible_facts['ansible_interfaces']:
+            if i == "lo" or i.startswith("docker") or i.startswith("veth"):
+                continue
+            network_devices.setdefault(i, {})
+        
+        for k in network_devices.keys():
+            d = ansible_facts[f"ansible_{k}"]
+            network_devices[k] = dict(
+                mac=d["macaddress"],
+                address=d["ipv4"]["address"],
+                mask=d["ipv4"]["netmask"],
+                network=d["ipv4"]["network"],
+                active=str(d["active"]),
+                speed=str(d["speed"]),
+                module=str(d["module"])
+            )
+        self.network_devices = network_devices
+
 
     def __repr__(self):
         return '<Asset %r>' % (self.sn)

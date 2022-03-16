@@ -3,6 +3,7 @@ from flask import jsonify
 from collections import OrderedDict
 import signal
 from contextlib import contextmanager
+import traceback
 
 DEBUG_RAISE = True
 
@@ -19,6 +20,7 @@ def raise_error_api(captures, err_msg):
                         msg = f"{err_msg}: {str(e)} -> {str(e.__context__)}"
                     else:
                         msg = f"{err_msg}: {str(e)}"
+                    traceback.print_exc()
                 else:
                     msg = f"{err_msg}"
                 return jsonify(

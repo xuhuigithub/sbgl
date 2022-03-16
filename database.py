@@ -1,8 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.sql import operators
-from sqlalchemy.sql.functions import user
 
 
 # engine = create_engine('sqlite:///./test_installOS.db', convert_unicode=True)

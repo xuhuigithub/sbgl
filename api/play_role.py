@@ -111,7 +111,7 @@ class SubPlayRoleList(Resource):
     def get(self):
         start = request.args.get("start", 1)
         limit = request.args.get("limit", 20)
-        return DAO.get_paginated_list(url=api.url_for(self), results=Sub_DAO.list(), start=start, limit=limit) 
+        return DAO.get_paginated_list(url=api.url_for(self), results=Sub_DAO.list_filtered(), start=start, limit=limit) 
     
     @ns.doc('create_sub_play_role')
     @ns.expect(sub_role)

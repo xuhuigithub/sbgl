@@ -42,9 +42,9 @@ class Collector:
         print("staw")
         loader = DataLoader()
         loader.set_basedir(self.role_path)
-        _vars = {}
-        for z in self.vars:
-            _vars.setdefault(z["name"],z["value"])
+        _vars = self.vars
+        # for z in self.vars:
+        #     _vars.setdefault(z["name"],z["value"])
         play_source =  dict(
             name = "Ansible Play",
             hosts = self.group_name,

@@ -137,6 +137,25 @@ def make_streaming(stream_filename, core_function, exit_function):
         
     return stream, wrap_core_function, result_q
 
+def inject_globals(play_args) -> typing.Dict[str, str]:
+        from models import SubPlayRole
+        _vars = dict()
+        for z in play_args:
+            _vars.setdefault(z["name"],z["value"])
+        
+        host_vars = dict()
+        sub_vars = dict()
+        # 全局变量
+        dao = SubPlayRoleDAO()
+        for i in dao.list():
+            i: SubPlayRole
+            host_vars.setdefault("{name}_HOSTS".format(name=i.name.upper().replace('-', '_')), "{hosts}".format(hosts=",".join(i.hosts)))
+            for x in i.play_args:
+                sub_vars.setdefault(f"{i.name.upper().replace('-', '_')}_VARS_{x['name'].upper()}", x["value"])
+        _all = {**_vars, **host_vars, **sub_vars}
+
+        return _all 
+
 @_open.route('/api/execPlayRole', methods=['GET'])
 @raise_error_api(captures=(KeyError), err_msg="传参错误请检查")
 @raise_error_api(captures=(DataNotFoundException,), err_msg="权限或者角色没有找到")
@@ -146,10 +165,17 @@ def test_open_data():
     dao = SubPlayRoleDAO()
     sub_play = dao.get(name=sub_play_name)
     f = tempfile.mkstemp()
-    c = Collector(logfile=f[1], vars=sub_play.play_args, hosts=sub_play.hosts, group_name=sub_play.main_name, role_path=sub_play.main.path)
-    print(f[1])
+    _vars = inject_globals(sub_play.play_args)
+    # print(_vars)
+    c = Collector(logfile=f[1], vars=_vars, hosts=sub_play.hosts, group_name=sub_play.main_name, role_path=sub_play.main.path)
+    # print(f[1])
     p = Process()
     def exit_function(result_q):
+        all_vars =dict(
+            name="__all__",
+            value=_vars,
+            type="String"
+        )
         now = datetime.datetime.now()
         p.join()
         result = result_q.get()
@@ -171,7 +197,9 @@ def test_open_data():
         r.exit_code = result
         r.exec_log = last_log
         r.exec_time = now
-        r.play_vars = sub_play.play_args
+        k = sub_play.play_args
+        k.extend(all_vars)
+        r.play_vars = k
         r.hosts = sub_play.hosts
 
         from database import db_session

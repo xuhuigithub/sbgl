@@ -133,10 +133,12 @@ class SubPlayRoleDAO(BaseDao):
         return self._get(name)
 
     def list(self):
+        return SubPlayRole.query.all()
+    
+    def list_filtered(self):
         query = SubPlayRole.query
         query = self.handle_filter(query=query)
         return query.all()
-    
     # def deserialize(self, model: SubPlayRole):
     #     # model.main.play_args = json.loads(model.main.play_args)
     #     model.play_args = json.loads(model.play_args)

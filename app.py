@@ -1,9 +1,6 @@
-import datetime
-import imp
 import os
 import atexit
-import typing
-from flask import Flask
+from flask import Flask, jsonify
 from sqlalchemy import true
 from database import init_db
 from auth import auth as auth_bl
@@ -15,6 +12,7 @@ import tempfile
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
 import models
+from collections import OrderedDict
 import socket
 
 app = Flask(__name__)
@@ -54,6 +52,17 @@ scheduler = APScheduler()
 scheduler.init_app(app)
 scheduler.start()
 
+# 包装restful 的abort 响应
+@app.after_request
+def after_request_func(response):
+    if response.is_json and response.json.get("message") and response.status_code != 200:
+        if not response.json.get("status"):
+            res = OrderedDict()
+            res["status"] = 1
+            res["msg"] = response.json.get("message")
+            res["data"] = []
+            return jsonify(res)
+    return response
 # @scheduler.task('interval', id='do_job_1', seconds=30, misfire_grace_time=900)
 # def job1():
 #     with scheduler.app.app_context():

@@ -48,6 +48,7 @@ class ResultPopulater(CallbackBase):
             # CPU型号 * CPU核心数 * CPU每个核心的线程数（超线程）* CPU 接口数
             self.asset.cpu = f"{result._result['ansible_facts']['ansible_processor'][1]} {result._result['ansible_facts']['ansible_processor'][2]} * {result._result['ansible_facts']['ansible_processor_cores']} * {result._result['ansible_facts']['ansible_processor_threads_per_core']} * {sockets_count}" 
             data = result._result['ansible_facts']
+            self.asset.set_network_devices(data)
             self.asset.disk = sum([int(data["ansible_devices"][i]["sectors"]) * \
                         int(data["ansible_devices"][i]["sectorsize"]) \
                         for i in data["ansible_devices"] if i[0:2] in ("vd", "ss", "sd")])
