@@ -46,7 +46,7 @@ class Assets(Base):
         network_devices: typing.List[typing.Dict[str, str]] = []
         for i in ansible_facts['ansible_interfaces']:
             network_device  = {}
-            if  i.startswith("eth") or i.startswith("ens") or i.startswith("bond") or  i.startswith("p"):
+            if  i.startswith("eth") or i.startswith("ens") or i.startswith("bond") or  i.startswith("p") or i.startswith("em") :
                 network_device.setdefault("name", i)
                 d = ansible_facts[f"ansible_{i}"]
                 if i.startswith("p"):
