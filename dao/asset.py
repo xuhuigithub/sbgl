@@ -32,21 +32,26 @@ class AssetDAO(BaseDao):
     def get(self, name):
         return self._get(name)
 
-    def create(self, data: dict):
+    def create(self, data: dict, auto_populate):
         self.__validate_data(data)
         u = Assets()
         for k in data.keys():
             setattr(u, k, data[k])
-        c = Collector(u)
-        c.collect()
+        if auto_populate == "true":
+            c = Collector(u)
+            c.collect()
         db_session.add(u)
         self._try_commint()
         return u
 
-    def update(self, name, data):
+    def update(self, name, data, auto_populate):
         u = self._get(name)
         self.__validate_data(data)
 
+        if auto_populate == "true":
+            c = Collector(u)
+            c.collect()
+        
         for k in data.keys():
             setattr(u, k, data[k])
         db_session.add(u)

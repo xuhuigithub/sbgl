@@ -2,6 +2,7 @@
 import multiprocessing
 import time
 import traceback
+from xml.etree.ElementTree import VERSION
 from flask import request
 from dao.play_role import SubPlayRoleDAO
 from dao import DataNotFoundException
@@ -225,3 +226,10 @@ def test_open_data():
 def test_getPlayRoles():
     
     return ["zookeeper"]
+
+
+@_open.route('/api/version', methods=['GET'])
+@wrapresp
+def open_version():
+    from version import VERSION
+    return VERSION

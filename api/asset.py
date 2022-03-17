@@ -14,11 +14,14 @@ from collector import ansible_collector
 mac = api.model('NSDevice', {
     "name": fields.String(),
     "address": fields.String(),
-    "mac": fields.String()
+    "mac": fields.String(),
+    "module": fields.String()
 })
+
 
 asset = api.model('Asset', {
     "sn": fields.String(),
+    "real_sn": fields.String(),
     "created_time": fields.DateTime(readonly=True),
     "model": fields.String(),
     "disk": fields.String(),
@@ -34,7 +37,8 @@ asset = api.model('Asset', {
     "cabinet": fields.String(attribute="cabinet.name"),
     "dc": fields.String(attribute="cabinet.dc_name"),
     "user_nums": fields.Integer(),
-    "last_seen": fields.String()
+    "last_seen": fields.String(),
+    "network_devices": fields.List(fields.Nested(mac))
 })
 page_asset = api.model('PageAsset',{
     "start": fields.Integer(required=True),
@@ -74,12 +78,14 @@ class AssetList(Resource):
     @ns.doc('create_asset')
     @ns.expect(asset)
     @ns.marshal_with(asset)
+    @ns.param("auto_populate", description="是否自动采集")
     def post(self):
         data = api.payload
         a = data.get("created_time", datetime.datetime.now())
         a = fields.DateTime().parse(a)
         data["created_time"] = a
-        return DAO.create(data),"创建资产成功"
+        auto_populate = request.args.get('auto_populate', 'false')
+        return DAO.create(data, auto_populate),"创建资产成功"
 
 
 @ns.route("sn")
@@ -109,5 +115,7 @@ class Asset(Resource):
     @need_permission(Permission_Enum.asset_update.value)
     @ns.expect(asset)
     @ns.marshal_with(asset)
+    @ns.param("auto_populate", description="是否自动采集")
     def put(self, sn):
-        return DAO.update(sn, api.payload)
+        auto_populate = request.args.get('auto_populate', 'false')
+        return DAO.update(sn, api.payload,auto_populate)

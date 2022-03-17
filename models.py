@@ -11,7 +11,8 @@ from sqlalchemy.ext.hybrid import hybrid_property
 
 class Assets(Base):
     __tablename__ = 'assets'
-    sn = Column(String(length=50), primary_key=True, comment="序列号")
+    sn = Column(Integer(), autoincrement=True, primary_key=True, comment="旧序列号，做主键")
+    real_sn = Column(String(length=100), comment="序列号")
     created_time = Column(DateTime(), comment="入库时间")
     model = Column(String(length=50), comment="设备型号")
     disk = Column(BigInteger(), comment="硬盘大小，字节")
@@ -33,6 +34,8 @@ class Assets(Base):
 
     @hybrid_property
     def network_devices(self) -> typing.Dict[str, typing.Dict[str, str]]:
+        if not self._network_devices:
+            return []
         return json.loads(self._network_devices)
     
     @network_devices.setter
@@ -40,23 +43,29 @@ class Assets(Base):
         self._network_devices = json.dumps(network_devices)
     
     def set_network_devices(self, ansible_facts):
-        network_devices: typing.Dict[str, typing.Dict[str, str]] = {}
+        network_devices: typing.List[typing.Dict[str, str]] = []
         for i in ansible_facts['ansible_interfaces']:
-            if i == "lo" or i.startswith("docker") or i.startswith("veth"):
-                continue
-            network_devices.setdefault(i, {})
-        
-        for k in network_devices.keys():
-            d = ansible_facts[f"ansible_{k}"]
-            network_devices[k] = dict(
-                mac=d["macaddress"],
-                address=d["ipv4"]["address"],
-                mask=d["ipv4"]["netmask"],
-                network=d["ipv4"]["network"],
-                active=str(d["active"]),
-                speed=str(d["speed"]),
-                module=str(d["module"])
-            )
+            network_device  = {}
+            if  i.startswith("eth") or i.startswith("ens") or i.startswith("bond") or  i.startswith("p"):
+                network_device.setdefault("name", i)
+                d = ansible_facts[f"ansible_{i}"]
+                if i.startswith("p"):
+                    if d.get("module") == "ixgbe": 
+                        pass
+                    else:
+                        continue
+                network_devices.append(
+                    {**dict(
+                    mac=d["macaddress"],
+                    address=d["ipv4"]["address"] if d.get("ipv4") else "",
+                    mask=d["ipv4"]["netmask"] if d.get("ipv4") else "",
+                    network=d["ipv4"]["network"] if d.get("ipv4") else "",
+                    active=str(d["active"]),
+                    speed=str(d.get("speed","unkown")),
+                    module=str(d["module"]) if d["type"] != "bonding" else ",".join(d["slaves"]),
+                    bonding=1 if d["type"] != "bonding" else 0
+                ), **network_device})
+            
         self.network_devices = network_devices
 
 
