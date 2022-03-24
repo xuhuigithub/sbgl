@@ -1,4 +1,5 @@
-
+import subprocess
+from io import StringIO
 import multiprocessing
 import time
 import traceback
@@ -220,13 +221,38 @@ def test_open_data():
 
     return flask.Response(stream(), mimetype='text/event-stream')
 
+from queue import Queue
+q= Queue()
 
-@_open.route('/api/getPlayRoles', methods=['GET'])
+@_open.route('/api/getLowerPort', methods=['GET'])
 @wrapresp
 def test_getPlayRoles():
-    
-    return ["zookeeper"]
+    import shlex,re
+    port = 0
+    k = re.compile(r':(\d+)\/')
 
+    command_line = "/home/xuhui/gotty  --once -term hterm -w -port 0  /usr/bin/python3 /home/xuhui/.local/bin/asciinema rec -y --overwrite -c  'ssh root@192.168.206.182' /tmp/test.cast"
+    # shell False 可以异步读取stderr
+    process  = subprocess.Popen(shlex.split(command_line), stderr=subprocess.PIPE,shell=False, close_fds=False)
+
+    q.put(process)
+    print(shlex.split(command_line))
+    while True:
+        output = process.stderr.readline()
+        if output.decode("utf8").__contains__("HTTP server is listening"):
+            port = k.findall(output.decode("utf8").strip())[0]
+            break
+
+
+    return {"port": int(port) , "pid": process.pid}
+
+
+@_open.route('/api/q', methods=['GET'])
+@wrapresp
+def test_qq():
+    p = q.get(timeout=10)
+    p.communicate()
+    return 'ok'
 
 @_open.route('/api/version', methods=['GET'])
 @wrapresp
