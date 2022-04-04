@@ -14,6 +14,9 @@ from flask_admin.contrib.sqla import ModelView
 import models
 from collections import OrderedDict
 import socket
+import typing
+import datetime
+from terminal import TerminalManager
 
 app = Flask(__name__)
 api.init_app(app)
@@ -63,6 +66,7 @@ def after_request_func(response):
             res["data"] = []
             return jsonify(res)
     return response
+
 # @scheduler.task('interval', id='do_job_1', seconds=30, misfire_grace_time=900)
 # def job1():
 #     with scheduler.app.app_context():
@@ -81,6 +85,17 @@ def after_request_func(response):
 #                 i.last_seen = datetime.datetime.now()
 #                 db_session.add(i)
 #                 db_session.commit()
+
+from apscheduler.jobstores.memory import MemoryJobStore
+
+scheduler.scheduler.add_jobstore(MemoryJobStore(), alias="memory")
+terminal_manager = TerminalManager()
+terminal_manager.secs_wait_for_defunct = 30
+
+
+@scheduler.task('interval', id='do_job_2', seconds=10, misfire_grace_time=900, max_instances=1, jobstore='memory',args=[terminal_manager])
+def job2(terminal_manager: TerminalManager,):
+    terminal_manager.run_clean()
         
 from database import Base, engine
 Base.metadata.create_all(bind=engine)

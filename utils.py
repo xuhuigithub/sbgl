@@ -4,6 +4,7 @@ from collections import OrderedDict
 import signal
 from contextlib import contextmanager
 import traceback
+import uuid
 
 DEBUG_RAISE = True
 
@@ -32,3 +33,6 @@ def raise_error_api(captures, err_msg):
                 )
         return wrapper
     return decorator
+
+def generate_uuid():
+    return str(uuid.uuid4())

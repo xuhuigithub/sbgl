@@ -1,25 +1,29 @@
 import subprocess
-from io import StringIO
+import shlex
+import re
 import multiprocessing
-import time
 import traceback
-from xml.etree.ElementTree import VERSION
+import tempfile
+import os
+import flask
+import typing
+import sys
+import models
+import datetime
 from flask import request
 from dao.play_role import SubPlayRoleDAO
 from dao import DataNotFoundException
 from . import open as _open
 from api import wrapresp
-import models
-import datetime
 from sqlalchemy.sql import func
-import flask
-import typing
-import sys
 from multiprocessing import Event, Process
 from executor.ansible_collector import Collector
-import tempfile
-import os
 from utils import raise_error_api
+from models import Assets, RoleExection
+from utils import generate_uuid
+from terminal import TerminalManager
+
+
 
 
 def sizeof_fmt(num, suffix='B'):
@@ -192,7 +196,6 @@ def test_open_data():
         sub_play.last_execution = now
         sub_play.last_exit_code = result
         sub_play.last_log = last_log
-        from models import RoleExection
         r = RoleExection()
         r.name = sub_play.name
         r.main_name = sub_play.main_name
@@ -221,37 +224,51 @@ def test_open_data():
 
     return flask.Response(stream(), mimetype='text/event-stream')
 
-from queue import Queue
-q= Queue()
+def get_open_port():
+        import socket
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(("",0))
+        s.listen(1)
+        port = s.getsockname()[1]
+        s.close()
+        return port
 
-@_open.route('/api/getLowerPort', methods=['GET'])
+
+@_open.route('/api/getLowerPort/<sn>', methods=['GET'])
 @wrapresp
-def test_getPlayRoles():
-    import shlex,re
+def test_getLowerPort(sn):
+    t = TerminalManager()
     port = 0
     k = re.compile(r':(\d+)\/')
 
-    command_line = "/home/xuhui/gotty  --once -term hterm -w -port 0  /usr/bin/python3 /home/xuhui/.local/bin/asciinema rec -y --overwrite -c  'ssh root@192.168.206.182' /tmp/test.cast"
+    from dao.asset import AssetDAO
+    a_dao = AssetDAO()
+    asset: Assets = a_dao.get(name=sn)
+    ip = asset.ip
+    uuid = generate_uuid()
+    port = get_open_port()
+
+    command_line = f"./res/gotty -c keystore:{uuid}  --once -term hterm -w -port {port}  /usr/bin/python3 /home/xuhui/.local/bin/asciinema rec -y --overwrite -c  'ssh root@{ip}' /tmp/{uuid}.cast"
     # shell False 可以异步读取stderr
-    process  = subprocess.Popen(shlex.split(command_line), stderr=subprocess.PIPE,shell=False, close_fds=False)
+    process  = subprocess.Popen(shlex.split(command_line),stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL,stdout=subprocess.DEVNULL,shell=False, close_fds=True)
 
-    q.put(process)
     print(shlex.split(command_line))
-    while True:
-        output = process.stderr.readline()
-        if output.decode("utf8").__contains__("HTTP server is listening"):
-            port = k.findall(output.decode("utf8").strip())[0]
-            break
+    # while True:
+    #     output = process.stderr.readline()
+    #     if output.decode("utf8").__contains__("HTTP server is listening"):
+    #         port = k.findall(output.decode("utf8").strip())[0]
+    #         break
 
+    t.add_terminal_process(process=process, uuid=uuid)
 
-    return {"port": int(port) , "pid": process.pid}
+    return {"port": int(port) , "pid": process.pid, "uuid": uuid}
 
 
 @_open.route('/api/q', methods=['GET'])
 @wrapresp
 def test_qq():
-    p = q.get(timeout=10)
-    p.communicate()
+    t = TerminalManager()
+    t.run_clean()
     return 'ok'
 
 @_open.route('/api/version', methods=['GET'])

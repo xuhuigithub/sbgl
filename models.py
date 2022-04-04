@@ -1,13 +1,17 @@
+import pickle
+from email.policy import default
 import hashlib
 import json
 import typing
 from uuid import uuid1
-from sqlalchemy import Column, Integer, String, Text, DateTime,Index,BigInteger, null
+from psutil import Popen
+from sqlalchemy import Column, Integer, String, Text, DateTime,Index,BigInteger, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.schema import ForeignKey, Table
 from database import Base
 from enum import Enum
 from sqlalchemy.ext.hybrid import hybrid_property
+from utils import generate_uuid
 
 class Assets(Base):
     __tablename__ = 'assets'
@@ -238,3 +242,23 @@ class RoleExection(Base):
     @hosts.setter
     def hosts(self, hosts: typing.List[str]):
         self._hosts = json.dumps(hosts)
+
+
+class Terminal(Base):
+    __tablename__ = 'terminal_execs'
+    id = Column(String(256),primary_key=True, default=generate_uuid)
+    pid = Column(BigInteger(), comment="进程ID", nullable=False)
+    p_pid = Column(BigInteger(), comment="父进程ID", nullable=False)
+    exec_time = Column(DateTime(), comment="开启终端的时间")
+    command = Column(String(256), comment="执行的命令")
+    video_url = Column(String(256), comment="审计日志", default=None)
+    is_running = Column(Boolean, unique=False, default=True)
+    _rail_process = Column('rail_process',Text(), comment="主机")
+
+    @hybrid_property
+    def rail_process(self) -> Popen:
+        return pickle.loads(self._rail_process)
+    
+    @rail_process.setter
+    def rail_process(self, rail_process):
+        pickle.dumps(rail_process)
